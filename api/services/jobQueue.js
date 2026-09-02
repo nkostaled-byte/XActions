@@ -28,7 +28,7 @@ const cancelledJobs = new Set();
 // prefix keeps keys namespaced when this Redis instance is shared with other services
 const operationsQueue = new Queue('operations', {
   prefix: process.env.REDIS_QUEUE_PREFIX || 'xactions',
-  redis: {
+  redis: process.env.REDIS_URL || {
     host: process.env.REDIS_HOST || 'localhost',
     port: process.env.REDIS_PORT || 6379,
     password: process.env.REDIS_PASSWORD
