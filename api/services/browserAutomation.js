@@ -451,9 +451,22 @@ export async function searchTweets(sessionCookie, query, options = {}) {
       waitUntil: 'domcontentloaded',
       timeout: 60000,
     });
-
+    
     console.log('✅ X search page loaded');
-
+    
+    console.log('🔍 Current URL:', await page.url());
+    
+    console.log(
+      '📄 Page title:',
+      await page.title()
+    );
+    
+    const bodyText = await page.evaluate(() => {
+      return document.body?.innerText?.slice(0, 3000) || '';
+    });
+    
+    console.log('📝 X page text:\n', bodyText);
+    
     // Give X a short amount of time to render the React content.
     await new Promise(resolve => setTimeout(resolve, 3000));
 
