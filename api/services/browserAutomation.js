@@ -32,29 +32,54 @@ async function getBrowser() {
   // Check if existing instance is still connected
   if (browserInstance) {
     try {
-      // A crashed/closed browser throws on any call
       await browserInstance.version();
     } catch {
-      console.warn('⚠️  Browser disconnected — restarting');
+      console.warn('⚠️ Browser disconnected — restarting');
       browserInstance = null;
     }
   }
 
   if (!browserInstance) {
+    console.log('🚀 Starting Chromium browser...');
+
     browserInstance = await puppeteer.launch({
-      headless: process.env.PUPPETEER_HEADLESS === 'false' ? false : 'new',
+      headless: true,
+
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
+
+        // Stability
         '--no-first-run',
         '--no-zygote',
-        '--disable-gpu',
-        '--disable-blink-features=AutomationControlled',
-        '--window-size=1920,1080'
-      ]
+        '--disable-background-networking',
+        '--disable-background-timer-throttling',
+        '--disable-renderer-backgrounding',
+
+        // Rendering
+        '--window-size=1920,1080',
+
+        // Reduce automation detection
+        '--disable-blink-features=AutomationControlled'
+      ],
+
+      defaultViewport: {
+        width: 1280,
+        height: 900
+      }
     });
+
+    browserInstance.on('disconnected', () => {
+      console.warn('⚠️ Chromium disconnected');
+      browserInstance = null;
+    });
+
+    console.log('✅ Chromium browser started');
+  }
+
+  return browserInstance;
+}
 
     // Auto-clear instance reference if browser closes unexpectedly
     browserInstance.on('disconnected', () => {
