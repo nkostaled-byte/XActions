@@ -435,7 +435,8 @@ export async function searchTweets(sessionCookie, query, options = {}) {
     const f = filterMap[filter] || 'live';
     
     await page.goto(`https://x.com/search?q=${encodedQuery}&src=typed_query&f=${f}`, {
-      waitUntil: 'networkidle2',
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
     });
     await randomDelay();
 
