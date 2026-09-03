@@ -49,18 +49,12 @@ async function getBrowser() {
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-
-        // Stability
         '--no-first-run',
         '--no-zygote',
         '--disable-background-networking',
         '--disable-background-timer-throttling',
         '--disable-renderer-backgrounding',
-
-        // Rendering
         '--window-size=1920,1080',
-
-        // Reduce automation detection
         '--disable-blink-features=AutomationControlled'
       ],
 
@@ -80,16 +74,6 @@ async function getBrowser() {
 
   return browserInstance;
 }
-
-    // Auto-clear instance reference if browser closes unexpectedly
-    browserInstance.on('disconnected', () => {
-      browserInstance = null;
-    });
-  }
-
-  return browserInstance;
-}
-
 /**
  * Close browser instance
  */
