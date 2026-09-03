@@ -418,7 +418,12 @@ export async function scrapeTweets(sessionCookie, username, options = {}) {
  * @returns {Object} { items: [], nextCursor }
  */
 export async function searchTweets(sessionCookie, query, options = {}) {
-  const { limit = 50, filter = 'latest', cursor } = options;
+  const {
+    limit = 50,
+    filter = 'latest',
+    cursor
+  } = options;
+
   const page = await getAuthenticatedPage(sessionCookie);
 
   try {
@@ -430,68 +435,204 @@ export async function searchTweets(sessionCookie, query, options = {}) {
       videos: 'video',
       media: 'media',
     };
-    
+
     const encodedQuery = encodeURIComponent(query);
     const f = filterMap[filter] || 'live';
-    
-    await page.goto(`https://x.com/search?q=${encodedQuery}&src=typed_query&f=${f}`, {
+
+    const url =
+      `https://x.com/search?q=${encodedQuery}` +
+      `&src=typed_query&f=${f}`;
+
+    console.log(`🔎 Opening X search: ${query}`);
+    console.log(`🌐 URL: ${url}`);
+
+    // Do not wait for networkidle2 on X.
+    await page.goto(url, {
       waitUntil: 'domcontentloaded',
       timeout: 60000,
     });
-    await randomDelay();
 
-    const tweets = new Map();
-    let retries = 0;
-    const maxRetries = 10;
+    console.log('✅ X search page loaded');
 
-    while (tweets.size < limit && retries < maxRetries) {
-      const tweetData = await page.evaluate(() => {
-        const articles = document.querySelectorAll('article[data-testid="tweet"]');
-        return Array.from(articles).map((article) => {
-          const textEl = article.querySelector('[data-testid="tweetText"]');
-          const authorLink = article.querySelector('[data-testid="User-Name"] a[href^="/"]');
-          const authorName = article.querySelector('[data-testid="User-Name"]')?.textContent;
-          const timeEl = article.querySelector('time');
-          const linkEl = article.querySelector('a[href*="/status/"]');
-          const likesEl = article.querySelector('[data-testid="like"] span span');
-          const retweetsEl = article.querySelector('[data-testid="retweet"] span span');
-          const repliesEl = article.querySelector('[data-testid="reply"] span span');
-          
-          return {
-            id: linkEl?.href?.match(/status\/(\d+)/)?.[1] || null,
-            text: textEl?.textContent || null,
-            author: {
-              username: authorLink?.href?.split('/')[3] || null,
-              name: authorName?.split('@')[0]?.trim() || null,
-            },
-            timestamp: timeEl?.getAttribute('datetime') || null,
-            likes: likesEl?.textContent || '0',
-            retweets: retweetsEl?.textContent || '0',
-            replies: repliesEl?.textContent || '0',
-            url: linkEl?.href || null,
-          };
-        }).filter(t => t.id);
-      });
+    // Give X a short amount of time to render the React content.
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
-      const prevSize = tweets.size;
-      tweetData.forEach((t) => tweets.set(t.id, t));
+    // Wait briefly for tweet articles to appear.
+    try {
+      await page.waitForSelector(
+        'article[data-testid="tweet"]',
+        {
+          timeout: 15000,
+        }
+      );
 
-      if (tweets.size === prevSize) {
-        retries++;
-      } else {
-        retries = 0;
-      }
-
-      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-      await randomDelay(1500, 3000);
+      console.log('✅ Tweets detected on page');
+    } catch (error) {
+      console.log('⚠️ No tweets detected after waiting');
     }
 
+    const tweets = new Map();
+
+    // Keep this deliberately small for the first working version.
+    const maxScrolls = Math.min(
+      8,
+      Math.ceil(limit / 5) + 2
+    );
+
+    for (let scroll = 0; scroll < maxScrolls; scroll++) {
+
+      console.log(
+        `📜 Scraping X search — scroll ${scroll + 1}/${maxScrolls}`
+      );
+
+      const tweetData = await page.evaluate(() => {
+        const articles = document.querySelectorAll(
+          'article[data-testid="tweet"]'
+        );
+
+        return Array.from(articles).map((article) => {
+          const textEl =
+            article.querySelector('[data-testid="tweetText"]');
+
+          const authorLink =
+            article.querySelector(
+              '[data-testid="User-Name"] a[href^="/"]'
+            );
+
+          const authorName =
+            article.querySelector(
+              '[data-testid="User-Name"]'
+            )?.textContent;
+
+          const timeEl =
+            article.querySelector('time');
+
+          const linkEl =
+            article.querySelector(
+              'a[href*="/status/"]'
+            );
+
+          const likesEl =
+            article.querySelector(
+              '[data-testid="like"] span span'
+            );
+
+          const retweetsEl =
+            article.querySelector(
+              '[data-testid="retweet"] span span'
+            );
+
+          const repliesEl =
+            article.querySelector(
+              '[data-testid="reply"] span span'
+            );
+
+          return {
+            id:
+              linkEl?.href?.match(/status\/(\d+)/)?.[1]
+              || null,
+
+            text:
+              textEl?.textContent
+              || null,
+
+            author: {
+              username:
+                authorLink?.href
+                  ?.split('/')[3]
+                  || null,
+
+              name:
+                authorName
+                  ?.split('@')[0]
+                  ?.trim()
+                  || null,
+            },
+
+            timestamp:
+              timeEl?.getAttribute('datetime')
+              || null,
+
+            likes:
+              likesEl?.textContent
+              || '0',
+
+            retweets:
+              retweetsEl?.textContent
+              || '0',
+
+            replies:
+              repliesEl?.textContent
+              || '0',
+
+            url:
+              linkEl?.href
+              || null,
+          };
+        }).filter(tweet => tweet.id);
+      });
+
+      console.log(
+        `📊 Found ${tweetData.length} tweets in DOM`
+      );
+
+      for (const tweet of tweetData) {
+        tweets.set(tweet.id, tweet);
+      }
+
+      console.log(
+        `📦 Unique tweets collected: ${tweets.size}/${limit}`
+      );
+
+      // We have enough.
+      if (tweets.size >= limit) {
+        break;
+      }
+
+      // Scroll down to load more.
+      await page.evaluate(() => {
+        window.scrollBy({
+          top: window.innerHeight * 1.5,
+          behavior: 'smooth',
+        });
+      });
+
+      // Short delay so X can load more tweets.
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+
+    const items = Array.from(tweets.values())
+      .slice(0, parseInt(limit));
+
+    console.log(
+      `✅ Search completed: ${items.length} tweets returned`
+    );
+
     return {
-      items: Array.from(tweets.values()).slice(0, limit),
+      items,
       nextCursor: null,
     };
+
+  } catch (error) {
+
+    console.error(
+      '❌ searchTweets failed:',
+      error?.message || error
+    );
+
+    throw error;
+
   } finally {
-    await page.close();
+
+    try {
+      await page.close();
+      console.log('🧹 X search page closed');
+    } catch (closeError) {
+      console.log(
+        '⚠️ Could not close X search page:',
+        closeError?.message || closeError
+      );
+    }
   }
 }
 
