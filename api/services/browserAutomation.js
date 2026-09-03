@@ -108,17 +108,22 @@ async function getAuthenticatedPage(sessionCookie) {
   const browser = await getBrowser();
   const page = await browser.newPage();
 
-  // Set viewport with slight randomization
+  // Configure browser page
   await page.setViewport({
-    width: 1280 + Math.floor(Math.random() * 100),
-    height: 800 + Math.floor(Math.random() * 100)
+    width: 1280,
+    height: 900,
+    deviceScaleFactor: 1
   });
-
-  // Set user agent
+  
   await page.setUserAgent(
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
+    'AppleWebKit/537.36 (KHTML, like Gecko) ' +
+    'Chrome/120.0.0.0 Safari/537.36'
   );
-
+  
+  await page.setExtraHTTPHeaders({
+    'Accept-Language': 'en-US,en;q=0.9'
+  });
   // Set X authentication cookies
   const authToken = sessionCookie || process.env.X_AUTH_TOKEN;
   const ct0 = process.env.X_CT0;
