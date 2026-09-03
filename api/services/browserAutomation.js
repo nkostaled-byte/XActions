@@ -76,16 +76,17 @@ export async function closeBrowser() {
 }
 
 /**
- * Create an authenticated page with session cookie
+/**
+ * Create an authenticated page with X session cookies
  */
 async function getAuthenticatedPage(sessionCookie) {
   const browser = await getBrowser();
   const page = await browser.newPage();
 
   // Set viewport with slight randomization
-  await page.setViewport({ 
-    width: 1280 + Math.floor(Math.random() * 100), 
-    height: 800 + Math.floor(Math.random() * 100) 
+  await page.setViewport({
+    width: 1280 + Math.floor(Math.random() * 100),
+    height: 800 + Math.floor(Math.random() * 100)
   });
 
   // Set user agent
@@ -93,16 +94,36 @@ async function getAuthenticatedPage(sessionCookie) {
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
   );
 
-  // Set session cookie if provided
-  if (sessionCookie) {
-    await page.setCookie({
+  // Set X authentication cookies
+  const authToken = sessionCookie || process.env.X_AUTH_TOKEN;
+  const ct0 = process.env.X_CT0;
+
+  const cookies = [];
+
+  if (authToken) {
+    cookies.push({
       name: 'auth_token',
-      value: sessionCookie,
+      value: authToken,
       domain: '.x.com',
       path: '/',
       httpOnly: true,
       secure: true,
     });
+  }
+
+  if (ct0) {
+    cookies.push({
+      name: 'ct0',
+      value: ct0,
+      domain: '.x.com',
+      path: '/',
+      httpOnly: false,
+      secure: true,
+    });
+  }
+
+  if (cookies.length > 0) {
+    await page.setCookie(...cookies);
   }
 
   return page;
