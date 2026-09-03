@@ -1,9 +1,9 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-import express from 'express';
-import { authMiddleware } from '../middleware/auth.js';
-import { queueJob, prisma } from '../services/jobQueue.js';
-
-const router = express.Router();
+import Queue from 'bull';
+import { PrismaClient } from '@prisma/client';
+import { processUnfollowNonFollowers } from './operations/unfollowNonFollowers.js';
+import { processUnfollowEveryone } from './operations/unfollowEveryone.js';
+import { processDetectUnfollowers } from './operations/detectUnfollowers.js';
 
 router.use(authMiddleware);
 
