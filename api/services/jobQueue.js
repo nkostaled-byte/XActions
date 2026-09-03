@@ -19,6 +19,7 @@ import { keywordFollowBrowser } from './operations/puppeteer/keywordFollow.js';
 import { autoCommentBrowser } from './operations/puppeteer/autoComment.js';
 import { runBrowserScript } from './operations/puppeteer/scriptRunner.js';
 import { searchTweets } from './browserAutomation.js';
+import { searchTweets } from './browserAutomation.js';
 
 const prisma = new PrismaClient();
 
