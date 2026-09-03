@@ -1,5 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import Queue from 'bull';
+import { PrismaClient } from '@prisma/client';
 import { processUnfollowNonFollowers } from './operations/unfollowNonFollowers.js';
 import { processUnfollowEveryone } from './operations/unfollowEveryone.js';
 import { processDetectUnfollowers } from './operations/detectUnfollowers.js';
@@ -18,6 +19,7 @@ import { keywordFollowBrowser } from './operations/puppeteer/keywordFollow.js';
 import { autoCommentBrowser } from './operations/puppeteer/autoComment.js';
 import { runBrowserScript } from './operations/puppeteer/scriptRunner.js';
 import { searchTweets } from './browserAutomation.js';
+
 
 const prisma = new PrismaClient();
 
