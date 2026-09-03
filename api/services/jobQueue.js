@@ -19,7 +19,7 @@ import { autoCommentBrowser } from './operations/puppeteer/autoComment.js';
 import { runBrowserScript } from './operations/puppeteer/scriptRunner.js';
 import { searchTweets } from './browserAutomation.js';
 
-
+const prisma = new PrismaClient();
 
 // In-memory job cancellation tracking
 const cancelledJobs = new Set();
@@ -522,6 +522,7 @@ process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
 setInterval(cleanupCancelledJobs, 3600000); // Every hour
 
 export {
+  prisma,
   addJob,
   queueJob,
   getJob,
