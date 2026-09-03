@@ -366,10 +366,12 @@ operationsQueue.process('searchTweets', 2, async (job) => {
     throw new Error('searchTweets: query is required');
   }
 
-  const sessionCookie = job.data.config?.sessionCookie;
-
+  const sessionCookie =
+    job.data.config?.sessionCookie ||
+    process.env.X_AUTH_TOKEN;
+  
   if (!sessionCookie) {
-    throw new Error('searchTweets: sessionCookie is required');
+    throw new Error('searchTweets: X_AUTH_TOKEN is not configured');
   }
 
   job.progress({
