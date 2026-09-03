@@ -360,16 +360,13 @@ operationsQueue.process('searchTweets', 2, async (job) => {
     limit = 50,
     filter = 'latest',
     cursor
-  } = job.data;
+  } = job.data.config || {};
 
   if (!query) {
     throw new Error('searchTweets: query is required');
   }
 
-  // Use the X session cookie stored in the job data.
-  const sessionCookie =
-    job.data.sessionCookie ||
-    job.data.config?.sessionCookie;
+  const sessionCookie = job.data.config?.sessionCookie;
 
   if (!sessionCookie) {
     throw new Error('searchTweets: sessionCookie is required');
@@ -384,8 +381,8 @@ operationsQueue.process('searchTweets', 2, async (job) => {
     sessionCookie,
     query,
     {
-      limit,
-      filter,
+      limit: parseInt(limit),
+      filter: filter || 'latest',
       cursor
     }
   );
@@ -397,7 +394,6 @@ operationsQueue.process('searchTweets', 2, async (job) => {
 
   return result;
 });
-
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 /** Fire a best-effort POST to a callbackUrl with the job result */
