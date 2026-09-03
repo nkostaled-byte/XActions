@@ -350,6 +350,53 @@ operationsQueue.process('datasetFetch', 2, async (job) => {
   return data;
 });
 
+// Process jobs - searchTweets
+operationsQueue.process('searchTweets', 2, async (job) => {
+  console.log(`🔎 Processing job ${job.id}: searchTweets`);
+
+  const {
+    query,
+    limit = 50,
+    filter = 'latest',
+    cursor
+  } = job.data;
+
+  if (!query) {
+    throw new Error('searchTweets: query is required');
+  }
+
+  // Use the X session cookie stored in the job data.
+  const sessionCookie =
+    job.data.sessionCookie ||
+    job.data.config?.sessionCookie;
+
+  if (!sessionCookie) {
+    throw new Error('searchTweets: sessionCookie is required');
+  }
+
+  job.progress({
+    status: 'running',
+    message: `Searching X for: ${query}`
+  });
+
+  const result = await searchTweets(
+    sessionCookie,
+    query,
+    {
+      limit,
+      filter,
+      cursor
+    }
+  );
+
+  job.progress({
+    status: 'done',
+    message: `Found ${result?.items?.length || 0} tweets`
+  });
+
+  return result;
+});
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 /** Fire a best-effort POST to a callbackUrl with the job result */
