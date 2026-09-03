@@ -1,9 +1,10 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-import Queue from 'bull';
-import { PrismaClient } from '@prisma/client';
-import { processUnfollowNonFollowers } from './operations/unfollowNonFollowers.js';
-import { processUnfollowEveryone } from './operations/unfollowEveryone.js';
-import { processDetectUnfollowers } from './operations/detectUnfollowers.js';
+
+import express from 'express';
+import { authMiddleware } from '../middleware/auth.js';
+import { queueJob, prisma } from '../services/jobQueue.js';
+
+const router = express.Router();
 
 router.use(authMiddleware);
 
@@ -11,14 +12,23 @@ router.use(authMiddleware);
 router.get('/search', async (req, res) => {
   try {
     const { query, limit = 50, filter } = req.query;
-    if (!query) return res.status(400).json({ error: 'Search query is required' });
+
+    if (!query) {
+      return res.status(400).json({
+        error: 'Search query is required'
+      });
+    }
 
     const operation = await prisma.operation.create({
       data: {
         userId: req.user.id,
         type: 'searchTweets',
         status: 'pending',
-        config: JSON.stringify({ query, limit: parseInt(limit), filter }),
+        config: JSON.stringify({
+          query,
+          limit: parseInt(limit),
+          filter
+        }),
       },
     });
 
@@ -27,13 +37,26 @@ router.get('/search', async (req, res) => {
       operationId: operation.id,
       userId: req.user.id,
       authMethod: req.user.authMethod || 'oauth',
-      config: { query, limit: parseInt(limit), filter, sessionCookie: req.user.sessionCookie },
+      config: {
+        query,
+        limit: parseInt(limit),
+        filter,
+        sessionCookie: req.user.sessionCookie
+      },
     });
 
-    res.json({ operationId: operation.id, status: 'queued', message: 'Search queued' });
+    res.json({
+      operationId: operation.id,
+      status: 'queued',
+      message: 'Search queued'
+    });
+
   } catch (error) {
     console.error('❌ Search error:', error);
-    res.status(500).json({ error: 'Failed to search' });
+
+    res.status(500).json({
+      error: 'Failed to search'
+    });
   }
 });
 
@@ -56,27 +79,44 @@ router.get('/trends', async (req, res) => {
       operationId: operation.id,
       userId: req.user.id,
       authMethod: req.user.authMethod || 'oauth',
-      config: { category, sessionCookie: req.user.sessionCookie },
+      config: {
+        category,
+        sessionCookie: req.user.sessionCookie
+      },
     });
 
-    res.json({ operationId: operation.id, status: 'queued', message: 'Trends fetch queued' });
+    res.json({
+      operationId: operation.id,
+      status: 'queued',
+      message: 'Trends fetch queued'
+    });
+
   } catch (error) {
     console.error('❌ Trends error:', error);
-    res.status(500).json({ error: 'Failed to fetch trends' });
+
+    res.status(500).json({
+      error: 'Failed to fetch trends'
+    });
   }
 });
 
 // Get explore feed
 router.get('/explore', async (req, res) => {
   try {
-    const { category = 'trending', limit = 30 } = req.query;
+    const {
+      category = 'trending',
+      limit = 30
+    } = req.query;
 
     const operation = await prisma.operation.create({
       data: {
         userId: req.user.id,
         type: 'getExploreFeed',
         status: 'pending',
-        config: JSON.stringify({ category, limit: parseInt(limit) }),
+        config: JSON.stringify({
+          category,
+          limit: parseInt(limit)
+        }),
       },
     });
 
@@ -85,13 +125,25 @@ router.get('/explore', async (req, res) => {
       operationId: operation.id,
       userId: req.user.id,
       authMethod: req.user.authMethod || 'oauth',
-      config: { category, limit: parseInt(limit), sessionCookie: req.user.sessionCookie },
+      config: {
+        category,
+        limit: parseInt(limit),
+        sessionCookie: req.user.sessionCookie
+      },
     });
 
-    res.json({ operationId: operation.id, status: 'queued', message: 'Explore feed fetch queued' });
+    res.json({
+      operationId: operation.id,
+      status: 'queued',
+      message: 'Explore feed fetch queued'
+    });
+
   } catch (error) {
     console.error('❌ Explore error:', error);
-    res.status(500).json({ error: 'Failed to fetch explore feed' });
+
+    res.status(500).json({
+      error: 'Failed to fetch explore feed'
+    });
   }
 });
 
